@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Life automat</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div id="wrapper">
+            <div class="game-frame">
+                <div class="title">
+                    <h1>Conway's Game of Life</h1>
+                    <p>The Game of Life, also known simply as Life, is a cellular automaton devised by the British mathematician John Horton Conway in 1970. It is a zero-player game, meaning that its evolution is determined by its initial state, requiring no further input.</p>
+                    <p><i>Select cells with cursor for set start generation and "Run" simulation</i></p>
+                </div>
+                <div class="game-frame__tools">
+                    <button class="game-frame__tool" onclick="run()">Run</button>
+                    <button class="game-frame__tool" onclick="stop()">Stop</button>
+                    <button class="game-frame__tool" onclick="window.location.reload()">Clear</button>
+                </div>
+                <div class="game-frame__universe"></div>
+            </div>
+        </div>
+        <script type="text/javascript" src="lodash.js"></script>
+        <script>
+            class Cell{
+                constructor(){
+                    this.alive = false;
+                    this.neighbors = [];
+                    this.first = true;
+                }
+
+                calculateState(cells){
+                    let aliveNeighbors = 0;
+                    this.neighbors.forEach((neightbor) => {
+                        if(neightbor){
+                            if(cells[neightbor[0]][neightbor[1]].alive){
+                                aliveNeighbors++;
+                            }
+                        }
+                    });
+
+                    if(aliveNeighbors == 3 && !this.alive){
+                        this.alive = true;
+                    }
+                    if(aliveNeighbors >=2 && aliveNeighbors <=3 && this.alive){
+                        this.alive = true;
+                    }
+                    if(aliveNeighbors < 2 || aliveNeighbors > 3){
+                        this.alive = false;
+                    }
+                }
+            }
+
+            let cells = [];
+            let maxColumns = 50;
+            let maxLines = 50;
+            let game = null;
+            let aliveCells = 0;
+
+            let backgrounds = [
+                "#686256",
+                "#c1502e",
+                "#587e76",
+                "#a96e5b",
+                "#454140",
+                "#bd5734",
+                "#a79e84",
+                "#7a3b2e"
+            ];
+
+            function renderUniverseView(cells){
+                let universe = document.getElementsByClassName('game-frame__universe');
+                universe[0].innerHTML = '';
+
+                if(cells.length > 0){
+                    let i = 0;
+                    for(cellString of cells){
+                        let j = 0;
+                        for(cell of cellString){
+                            let backgroundColor = backgrounds[Math.floor(Math.random() * (backgrounds.length - 1))];
+                            let div = document.createElement("div");
+                            div.setAttribute('class', 'game-frame__universe-cell' + ((cell.alive) ? ' alive' : ''));
+                            div.setAttribute('data-index', i + ':' + j);
+                            div.style.backgroundColor = (cell.alive) ? backgroundColor : null;
+
+                            if(cell.first){
+                                div.addEventListener('click', (event) => {
+                                    event.target.setAttribute('class', 'game-frame__universe-cell alive');
+                                    let parts = event.target.dataset['index'].split(":");
+                                    cells[parts[0]][parts[1]].alive = true;
+                                });
+                                cell.first = false;
+                            }
+
+                            universe[0].appendChild(div);
+                            j++;
+                        }
+                        i++;
+                    }
+                }
+            }
+
+            function firstGeneration(){
+                cells = [];
+
+                for(let i = 0;i < maxLines;i++){
+                    let cellsString = [];
+
+                    for(let j = 0;j < maxColumns; j++){
+                        let cell = new Cell();
+                        cell.neighbors = createCellNeighbors(i, j);
+                        cellsString.push(cell);
+                    }
+
+                    cells.push(cellsString);
+                }
+
+                renderUniverseView(cells);
+            }
+
+            function nextGeneration(){
+                let newCells = [];
+
+                if(cells.length > 0){
+                    for(cellString of cells){
+                        let cellsString = [];
+                        for(cell of cellString){
+                            let newCell = _.cloneDeep(cell);
+                            newCell.calculateState(cells);
+                            cellsString.push(newCell);
+                            if(newCell.alive){
+                                aliveCells++;
+                            }
+                        }
+                        newCells.push(cellsString);
+                    }
+                    
+                    cells = newCells.slice();
+                }
+
+                if(!aliveCells){
+                    alert('There are no alive cells. GAME OVER!!!');
+                    stop();
+                    firstGeneration();
+                }else{
+                    renderUniverseView(cells);
+                }
+                
+            }
+
+            function createCellNeighbors(line, column){
+                return [
+                    (line > 0 && column > 0) ? [line - 1, column - 1] : null, 
+                    (line > 0) ? [line - 1, column] : null, 
+                    (line > 0 && column < maxColumns - 1) ? [line - 1, column + 1] : null,
+                    (column > 0) ? [line, column - 1] : null,   
+                    (column < maxColumns - 1) ? [line, column + 1] : null,
+                    (line < maxLines - 1 && column > 0) ? [line + 1, column - 1] : null, 
+                    (line < maxLines - 1) ? [line + 1, column] : null, 
+                    (line < maxLines - 1 && column < maxColumns - 1) ? [line + 1, column + 1] : null
+                ]
+            }
+
+            function run(){
+                game = setInterval(nextGeneration, 500);
+            }
+
+            function stop(){
+                clearInterval(game);
+            }
+
+            firstGeneration();
+        </script>
+    </body>
+</html>
